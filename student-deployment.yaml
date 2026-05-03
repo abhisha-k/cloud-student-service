@@ -18,7 +18,19 @@ spec:
         imagePullPolicy: Always
         name: app-student-abhisha
         ports:
-        - containerPort: 80
+        - containerPort: 3000
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 15
 ---
 apiVersion: v1
 kind: Service
@@ -26,13 +38,13 @@ metadata:
   namespace: cloudstudents
   name: service-student-abhisha
 spec:
-  ports:
-    - port: 80
-      targetPort: 80
-      protocol: TCP
-  type: NodePort
   selector:
     app.kubernetes.io/name: app-student-abhisha
+  ports:
+    - port: 3000        # external service port
+      targetPort: 3000  # matches containerPort in Deployment
+      protocol: TCP
+  type: NodePort
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -42,6 +54,9 @@ metadata:
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-port: "3000"
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
 spec:
   ingressClassName: alb
   rules:
@@ -53,5 +68,4 @@ spec:
             service:
               name: service-student-abhisha
               port:
-                number: 80
-                  
+                number: 3000
